@@ -37,7 +37,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 <div id="installmentValueWrap" style="display:none"><label>Valor de cada parcela (R$)</label><input id="installmentValue" type="number" min="0.01" step="0.01" placeholder="0,00"></div>
 <div id="countWrap" style="display:none"><label>Total de parcelas</label><input id="installmentCount" type="number" min="2" step="1" placeholder="Ex.: 10"></div>
 <div id="paidWrap" style="display:none"><label>Parcelas já pagas</label><input id="paidCount" type="number" min="0" step="1" value="0"></div>
-<div><label>Vencimento / próxima parcela</label><input id="date" type="date"></div>
+<div><label>Próximo vencimento / vencimento</label><input id="date" type="date"></div>
 <div><label>Situação</label><select id="status"><option>PENDENTE</option><option>PAGO</option></select></div>
 </div><p class="muted" id="installmentHint" style="display:none">Informe os dois valores. O aplicativo calcula o total e acompanha quantas parcelas ainda faltam.</p>
 <div class="actions"><button type="submit">SALVAR DESPESA</button><button type="reset" class="secondary">LIMPAR</button></div></form></section>
@@ -53,7 +53,7 @@ let expenses=JSON.parse(localStorage.getItem('despesasCasa')||'[]');
 let banks=JSON.parse(localStorage.getItem('bancosDespesasCasa')||'["CAIXA","NUBANK PF","NUBANK PJ"]');
 const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function save(){localStorage.setItem('despesasCasa',JSON.stringify(expenses));render()}
+function save(){localStorage.setItem('despesasCasa',JSON.stringify(expenses));render()}\nfunction nextMonth(dateStr){if(!dateStr)return '';let [y,m,d]=dateStr.split('-').map(Number);let target=new Date(y,m-1,1);target.setMonth(target.getMonth()+1);let lastDay=new Date(target.getFullYear(),target.getMonth()+1,0).getDate();target.setDate(Math.min(d,lastDay));return target.getFullYear()+'-'+String(target.getMonth()+1).padStart(2,'0')+'-'+String(target.getDate()).padStart(2,'0')}
 function updateBankOptions(){
  $('banks').innerHTML=banks.map(b=>'<button data-bank="'+esc(b)+'">'+esc(b)+'</button>').join('');
  $('bank').innerHTML='<option value="">Selecione</option>'+banks.map(b=>'<option>'+esc(b)+'</option>').join('');
@@ -71,7 +71,7 @@ $('addBank').onclick=()=>{let name=prompt('Digite o nome do novo banco:');if(nam
 $('kind').onchange=()=>{let on=$('kind').value==='installment';$('installmentValueWrap').style.display=on?'block':'none';$('countWrap').style.display=on?'block':'none';$('paidWrap').style.display=on?'block':'none';$('installmentHint').style.display=on?'block':'none';$('totalWrap').querySelector('label').textContent=on?'Valor total da compra (R$)':'Valor (R$)';$('installmentValue').required=on;$('installmentCount').required=on};
 $('expenseForm').onsubmit=e=>{e.preventDefault();let inst=$('kind').value==='installment',total=Number($('totalAmount').value),unit=Number($('installmentValue').value),count=Number($('installmentCount').value),paid=Number($('paidCount').value||0);if(inst&&(count<2||paid>count||unit<=0||total<=0)){alert('Confira os valores e a quantidade de parcelas.');return}expenses.unshift({id:Date.now().toString(),description:$('description').value.trim(),bank:$('bank').value,amount:inst?total:Number($('totalAmount').value),totalAmount:total,date:$('date').value,status:$('status').value,kind:inst?'installment':'single',installmentValue:unit,installmentCount:count,paidCount:paid});save();e.target.reset();$('kind').value='single';$('kind').onchange()};
 $('filter').onchange=render;$('filterStatus').onchange=render;
-window.payInstallment=id=>{let x=expenses.find(x=>x.id===id);if(x&&Number(x.paidCount)<Number(x.installmentCount)){x.paidCount=Number(x.paidCount)+1;save()}};
+window.payInstallment=id=>{let x=expenses.find(x=>x.id===id);if(x&&Number(x.paidCount)<Number(x.installmentCount)){x.paidCount=Number(x.paidCount)+1;if(Number(x.paidCount)<Number(x.installmentCount)&&x.date)x.date=nextMonth(x.date);save()}};
 window.toggleStatus=id=>{let x=expenses.find(x=>x.id===id);if(x){x.status=x.status==='PAGO'?'PENDENTE':'PAGO';save()}};
 window.removeExpense=id=>{if(confirm('Excluir esta despesa?')){expenses=expenses.filter(x=>x.id!==id);save()}};
 $('export').onclick=()=>{let blob=new Blob([JSON.stringify({banks,expenses},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-despesas-casa.json';a.click();URL.revokeObjectURL(a.href)};
