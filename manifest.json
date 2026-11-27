@@ -1,1 +1,19 @@
-{"name":"Minhas Despesas Casa","short_name":"Despesas Casa","start_url":"./index.html","display":"standalone","background_color":"#f5f3fa","theme_color":"#553c9a","icons":[]}
+{
+  "name": "Minhas Despesas Casa",
+  "short_name": "Despesas Casa",
+  "description": "Controle de despesas, bancos e capital",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f3fa",
+  "theme_color": "#553c9a",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
