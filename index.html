@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#553c9a"><link rel="manifest" href="manifest.json">
+<title>Minhas Despesas Casa</title>
+<style>
+:root{--roxo:#553c9a;--fundo:#f5f3fa;--texto:#252238}*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--texto);font:16px Arial,sans-serif}
+header{background:var(--roxo);color:white;padding:22px 16px;text-align:center}
+header h1{font-size:23px;margin:0 0 5px}header p{margin:0;opacity:.9}
+main{max-width:850px;margin:20px auto;padding:0 14px}
+.card{background:white;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 3px 14px #24184b12}
+h2{font-size:19px;margin:0 0 14px}.banks{display:none;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}
+button{border:0;border-radius:10px;padding:13px 15px;background:var(--roxo);color:white;font-weight:bold;font-size:15px;cursor:pointer}
+button.secondary{background:#ece8f7;color:#39276e}.banks button{background:#ece8f7;color:#39276e}
+label{display:block;font-size:13px;font-weight:bold;margin:10px 0 5px}
+input,select{width:100%;padding:12px;border:1px solid #d8d3e4;border-radius:9px;font-size:16px;background:white}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.wide{grid-column:1/-1}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.tile{background:#f0edf8;padding:13px;border-radius:10px}.tile b{display:block;font-size:12px;margin-bottom:7px}.tile strong{font-size:18px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #eee;vertical-align:top}th{font-size:12px;color:#625b72}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.muted{color:#716b7d;font-size:13px}.tag{padding:4px 7px;border-radius:20px;background:#eee8ff;font-size:12px}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:1fr}.banks{grid-template-columns:1fr}table{font-size:12px}}
+</style></head>
+<body><header><h1>MINHAS DESPESAS CASA</h1><p>Controle simples dos seus bancos e pagamentos</p></header>
+<main>
+<section class="card"><h2>Bancos</h2><button id="showBanks">＋ ADICIONAR TODOS OS BANCOS</button>
+<div class="banks" id="banks"><button data-bank="CAIXA">CAIXA</button><button data-bank="NUBANK PF">NUBANK PF</button><button data-bank="NUBANK PJ">NUBANK PJ</button></div>
+<p class="muted">Selecione um banco para lançar uma despesa.</p></section>
+<section class="card"><h2 id="formTitle">Adicionar despesa</h2>
+<form id="expenseForm"><div class="grid">
+<div class="wide"><label>Descrição da despesa</label><input id="description" required placeholder="Ex.: Conta de luz"></div>
+<div><label>Banco</label><select id="bank" required><option value="">Selecione</option><option>CAIXA</option><option>NUBANK PF</option><option>NUBANK PJ</option></select></div>
+<div><label>Valor (R$)</label><input id="amount" type="number" min="0.01" step="0.01" required placeholder="0,00"></div>
+<div><label>Vencimento</label><input id="date" type="date"></div>
+<div><label>Situação</label><select id="status"><option>PENDENTE</option><option>PAGO</option></select></div>
+</div><div class="actions"><button type="submit">SALVAR DESPESA</button><button type="reset" class="secondary">LIMPAR</button></div></form></section>
+<section class="card"><h2>Resumo por banco</h2><div class="summary" id="summary"></div></section>
+<section class="card"><h2>Despesas cadastradas</h2><div class="grid"><div><label>Filtrar banco</label><select id="filter"><option value="">Todos os bancos</option><option>CAIXA</option><option>NUBANK PF</option><option>NUBANK PJ</option></select></div><div><label>Filtrar situação</label><select id="filterStatus"><option value="">Todas</option><option>PENDENTE</option><option>PAGO</option></select></div></div>
+<div style="overflow-x:auto;margin-top:12px"><table><thead><tr><th>Descrição</th><th>Banco</th><th>Valor</th><th>Vencimento</th><th>Situação</th><th>Ação</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="actions"><button id="export" class="secondary">BAIXAR BACKUP (JSON)</button><button id="pdf">GERAR / COMPARTILHAR PDF</button></div>
+<p class="muted">Os dados ficam salvos neste aparelho/navegador. Faça backups regularmente. A sincronização entre celular e computador será configurada numa próxima etapa.</p></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let expenses=JSON.parse(localStorage.getItem('despesasCasa')||'[]');
+const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+function save(){localStorage.setItem('despesasCasa',JSON.stringify(expenses));render()}
+function render(){
+ const banks=['CAIXA','NUBANK PF','NUBANK PJ'];
+ $('summary').innerHTML=banks.map(b=>{let list=expenses.filter(x=>x.bank===b),total=list.reduce((s,x)=>s+Number(x.amount),0),paid=list.filter(x=>x.status==='PAGO').reduce((s,x)=>s+Number(x.amount),0);return `<div class="tile"><b>${b}</b><strong>${money(total)}</strong><div class="muted">Pago: ${money(paid)}</div><div class="muted">Pendente: ${money(total-paid)}</div></div>`}).join('');
+ let list=expenses.filter(x=>(!$('filter').value||x.bank===$('filter').value)&&(!$('filterStatus').value||x.status===$('filterStatus').value));
+ $('rows').innerHTML=list.length?list.map(x=>`<tr><td>${esc(x.description)}</td><td>${x.bank}</td><td>${money(x.amount)}</td><td>${x.date?new Date(x.date+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td><td><span class="tag">${x.status}</span></td><td><button class="secondary" onclick="toggleStatus('${x.id}')">${x.status==='PAGO'?'Reabrir':'Marcar pago'}</button> <button class="secondary" onclick="removeExpense('${x.id}')">Excluir</button></td></tr>`).join(''):'<tr><td colspan="6">Nenhuma despesa cadastrada.</td></tr>';
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('showBanks').onclick=()=>{$('banks').style.display=$('banks').style.display==='grid'?'none':'grid'};
+document.querySelectorAll('[data-bank]').forEach(b=>b.onclick=()=>{$('bank').value=b.dataset.bank;$('description').focus();$('banks').style.display='none'});
+$('expenseForm').onsubmit=e=>{e.preventDefault();expenses.unshift({id:Date.now().toString(),description:$('description').value.trim(),bank:$('bank').value,amount:Number($('amount').value),date:$('date').value,status:$('status').value});save();e.target.reset()};
+$('filter').onchange=render;$('filterStatus').onchange=render;
+window.toggleStatus=id=>{let x=expenses.find(x=>x.id===id);if(x){x.status=x.status==='PAGO'?'PENDENTE':'PAGO';save()}};
+window.removeExpense=id=>{if(confirm('Excluir esta despesa?')){expenses=expenses.filter(x=>x.id!==id);save()}};
+$('export').onclick=()=>{let blob=new Blob([JSON.stringify(expenses,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-despesas-casa.json';a.click();URL.revokeObjectURL(a.href)};
+$('pdf').onclick=()=>{let lines=['MINHAS DESPESAS CASA','',...expenses.map(x=>`${x.description} | ${x.bank} | ${money(x.amount)} | ${x.date||'Sem data'} | ${x.status}`)];let w=window.open('','_blank');w.document.write('<pre style="font:14px Arial;white-space:pre-wrap">'+esc(lines.join('\n'))+'</pre><script>window.print()<\\/script>')};
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');render();
+</script></body></html>
