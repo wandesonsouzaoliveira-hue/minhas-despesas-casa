@@ -103,6 +103,8 @@ $('allPaymentsReport').onclick=()=>{let items=[];expenses.forEach(x=>{if(x.kind=
 $('pdf').onclick=()=>{let lines=['MINHAS DESPESAS CASA','',...expenses.map(x=>x.description+' | '+x.bank+' | '+money(x.totalAmount??x.amount)+' | '+(x.kind==='installment'?(x.paidCount+'/'+x.installmentCount+' parcelas pagas'):'')+' | '+(x.date||'Sem data'))];let w=window.open('','_blank');w.document.write('<pre style="font:14px Arial;white-space:pre-wrap">'+esc(lines.join('\n'))+'</pre><script>window.print()<\\/script>')};
 let deferredInstallPrompt=null;
 const installButton=$('installApp');
+const appIsInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+if(appIsInstalled){installButton.textContent='APLICATIVO JÁ INSTALADO';installButton.disabled=true;installButton.style.opacity='.8';}
 const isInstalledApp=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
 if(isInstalledApp){installButton.style.display='none'}
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event});
