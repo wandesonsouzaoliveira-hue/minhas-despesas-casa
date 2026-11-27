@@ -1,8 +1,8 @@
-const CACHE='despesas-casa-v2';
+const CACHE='despesas-casa-v3';
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE);
-    await cache.addAll(['./','./index.html','./manifest.json']);
+    await cache.addAll(['./','./index.html','./manifest.json','./icon.svg']);
     await self.skipWaiting();
   })());
 });
