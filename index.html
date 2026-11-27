@@ -103,8 +103,10 @@ $('allPaymentsReport').onclick=()=>{let items=[];expenses.forEach(x=>{if(x.kind=
 $('pdf').onclick=()=>{let lines=['MINHAS DESPESAS CASA','',...expenses.map(x=>x.description+' | '+x.bank+' | '+money(x.totalAmount??x.amount)+' | '+(x.kind==='installment'?(x.paidCount+'/'+x.installmentCount+' parcelas pagas'):'')+' | '+(x.date||'Sem data'))];let w=window.open('','_blank');w.document.write('<pre style="font:14px Arial;white-space:pre-wrap">'+esc(lines.join('\n'))+'</pre><script>window.print()<\\/script>')};
 let deferredInstallPrompt=null;
 const installButton=$('installApp');
+const isInstalledApp=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+if(isInstalledApp){installButton.style.display='none'}
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event});
-installButton.onclick=async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null}else{alert('Para instalar no computador: no Chrome ou Edge, abra o menu do navegador e escolha “Instalar Minhas Despesas Casa”. No Android: abra no Chrome, toque nos três pontinhos e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.')}}; 
-window.addEventListener('appinstalled',()=>{installButton.textContent='APLICATIVO INSTALADO';installButton.disabled=true});
+installButton.onclick=async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();const choice=await deferredInstallPrompt.userChoice;if(choice&&choice.outcome==='accepted'){installButton.style.display='none'}deferredInstallPrompt=null}else{alert('Este aplicativo já pode estar instalado. Se estiver usando o navegador, instale pelo menu do Chrome ou Edge.')}}; 
+window.addEventListener('appinstalled',()=>{installButton.style.display='none'});
 updateBankOptions();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');render();
 </script></body></html>
