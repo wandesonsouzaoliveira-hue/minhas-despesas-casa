@@ -33,8 +33,8 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 <div class="wide"><label>Descrição da despesa / compra</label><input id="description" required placeholder="Ex.: Conta de luz ou Geladeira"></div>
 <div><label>Banco</label><select id="bank" required></select></div>
 <div><label>Tipo</label><select id="kind"><option value="single">À vista / despesa comum</option><option value="installment">Compra parcelada</option></select></div>
-<div id="totalWrap"><label>Valor total da compra (R$)</label><input id="totalAmount" type="number" min="0.01" step="0.01" placeholder="0,00"></div>
-<div id="installmentValueWrap" style="display:none"><label>Valor de cada parcela (R$)</label><input id="installmentValue" type="number" min="0.01" step="0.01" placeholder="0,00"></div>
+<div id="totalWrap"><label>Valor total da compra (R$)</label><input id="totalAmount" type="number" min="0.01" step="0.01" placeholder="0,00" required></div>
+<div id="installmentValueWrap" style="display:none"><label>Valor de cada parcela (calculado automaticamente)</label><input id="installmentValue" type="number" min="0.01" step="0.01" placeholder="Aguardando valores" readonly></div>
 <div id="countWrap" style="display:none"><label>Total de parcelas</label><input id="installmentCount" type="number" min="2" step="1" placeholder="Ex.: 10"></div>
 <div id="paidWrap" style="display:none"><label>Parcelas já pagas</label><input id="paidCount" type="number" min="0" step="1" value="0"></div>
 <div><label>Próximo vencimento / vencimento</label><input id="date" type="date"></div>
@@ -54,7 +54,7 @@ let banks=JSON.parse(localStorage.getItem('bancosDespesasCasa')||'["CAIXA","NUBA
 const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function save(){localStorage.setItem('despesasCasa',JSON.stringify(expenses));render()}\nfunction nextMonth(dateStr){if(!dateStr)return '';let [y,m,d]=dateStr.split('-').map(Number);let target=new Date(y,m-1,1);target.setMonth(target.getMonth()+1);let lastDay=new Date(target.getFullYear(),target.getMonth()+1,0).getDate();target.setDate(Math.min(d,lastDay));return target.getFullYear()+'-'+String(target.getMonth()+1).padStart(2,'0')+'-'+String(target.getDate()).padStart(2,'0')}
-function updateBankOptions(){
+function calcInstallment(){let total=Number($('totalAmount').value),count=Number($('installmentCount').value);$('installmentValue').value=(total>0&&count>=2)?(total/count).toFixed(2):''}\nfunction updateBankOptions(){
  $('banks').innerHTML=banks.map(b=>'<button data-bank="'+esc(b)+'">'+esc(b)+'</button>').join('');
  $('bank').innerHTML='<option value="">Selecione</option>'+banks.map(b=>'<option>'+esc(b)+'</option>').join('');
  $('filter').innerHTML='<option value="">Todos os bancos</option>'+banks.map(b=>'<option>'+esc(b)+'</option>').join('');
@@ -68,7 +68,7 @@ function render(){
 }
 $('showBanks').onclick=()=>{$('banks').style.display=$('banks').style.display==='grid'?'none':'grid'};
 $('addBank').onclick=()=>{let name=prompt('Digite o nome do novo banco:');if(name&&name.trim()){name=name.trim().toUpperCase();if(!banks.includes(name)){banks.push(name);localStorage.setItem('bancosDespesasCasa',JSON.stringify(banks));updateBankOptions();render()}$('bank').value=name}};
-$('kind').onchange=()=>{let on=$('kind').value==='installment';$('installmentValueWrap').style.display=on?'block':'none';$('countWrap').style.display=on?'block':'none';$('paidWrap').style.display=on?'block':'none';$('installmentHint').style.display=on?'block':'none';$('totalWrap').querySelector('label').textContent=on?'Valor total da compra (R$)':'Valor (R$)';$('installmentValue').required=on;$('installmentCount').required=on};
+$('totalAmount').oninput=calcInstallment;$('installmentCount').oninput=calcInstallment;\n$('kind').onchange=()=>{let on=$('kind').value==='installment';$('installmentValueWrap').style.display=on?'block':'none';$('countWrap').style.display=on?'block':'none';$('paidWrap').style.display=on?'block':'none';$('installmentHint').style.display=on?'block':'none';$('totalWrap').querySelector('label').textContent=on?'Valor total da compra (R$)':'Valor (R$)';$('installmentValue').required=on;$('installmentCount').required=on;calcInstallment()};
 $('expenseForm').onsubmit=e=>{e.preventDefault();let inst=$('kind').value==='installment',total=Number($('totalAmount').value),unit=Number($('installmentValue').value),count=Number($('installmentCount').value),paid=Number($('paidCount').value||0);if(inst&&(count<2||paid>count||unit<=0||total<=0)){alert('Confira os valores e a quantidade de parcelas.');return}expenses.unshift({id:Date.now().toString(),description:$('description').value.trim(),bank:$('bank').value,amount:inst?total:Number($('totalAmount').value),totalAmount:total,date:$('date').value,status:$('status').value,kind:inst?'installment':'single',installmentValue:unit,installmentCount:count,paidCount:paid});save();e.target.reset();$('kind').value='single';$('kind').onchange()};
 $('filter').onchange=render;$('filterStatus').onchange=render;
 window.payInstallment=id=>{let x=expenses.find(x=>x.id===id);if(x&&Number(x.paidCount)<Number(x.installmentCount)){x.paidCount=Number(x.paidCount)+1;if(Number(x.paidCount)<Number(x.installmentCount)&&x.date)x.date=nextMonth(x.date);save()}};
