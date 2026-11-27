@@ -28,6 +28,18 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 <section class="card"><h2>Bancos</h2><button id="showBanks">＋ ADICIONAR TODOS OS BANCOS</button>
 <div class="banks" id="banks"></div><div class="actions"><button id="addBank" class="secondary">＋ ADICIONAR OUTRO BANCO</button></div>
 <div class="grand-total"><b>VALOR TOTAL DAS DESPESAS</b><strong id="grandTotal">R$ 0,00</strong></div><p class="muted">Cadastre outros bancos e selecione um para lançar uma despesa.</p></section>
+<section class="card"><h2>Controle de capital</h2>
+<div class="summary">
+<div class="tile"><b>ENTRADA DE CAPITAL</b><strong id="capitalIn">R$ 0,00</strong></div>
+<div class="tile"><b>SAÍDAS PAGAS</b><strong id="capitalOut">R$ 0,00</strong></div>
+<div class="tile"><b>SALDO ATUAL</b><strong id="capitalBalance">R$ 0,00</strong></div>
+</div>
+<form id="capitalForm"><div class="grid">
+<div><label>Descrição da entrada</label><input id="capitalDescription" placeholder="Ex.: Salário, depósito"></div>
+<div><label>Valor da entrada (R$)</label><input id="capitalAmount" type="number" min="0.01" step="0.01" placeholder="0,00"></div>
+</div><div class="actions"><button type="submit">REGISTRAR ENTRADA</button></div></form>
+<p class="muted">As saídas são calculadas automaticamente somente com despesas marcadas como pagas e parcelas já pagas.</p>
+</section>
 <section class="card"><h2>Adicionar despesa ou compra parcelada</h2>
 <form id="expenseForm"><div class="grid">
 <div class="wide"><label>Descrição da despesa / compra</label><input id="description" required placeholder="Ex.: Conta de luz ou Geladeira"></div>
@@ -51,9 +63,11 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 const $=id=>document.getElementById(id);
 let expenses=JSON.parse(localStorage.getItem('despesasCasa')||'[]');
 let banks=JSON.parse(localStorage.getItem('bancosDespesasCasa')||'["CAIXA","NUBANK PF","NUBANK PJ"]');
+let capitalEntries=JSON.parse(localStorage.getItem('entradasCapitalCasa')||'[]');
 const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function save(){localStorage.setItem('despesasCasa',JSON.stringify(expenses));render()}
+function renderCapital(){let incoming=capitalEntries.reduce((s,x)=>s+Number(x.amount||0),0);let outgoing=expenses.reduce((s,x)=>s+(x.kind==='installment'?Number(x.installmentValue||0)*Number(x.paidCount||0):(x.status==='PAGO'?Number(x.totalAmount??x.amount??0):0)),0);$('capitalIn').textContent=money(incoming);$('capitalOut').textContent=money(outgoing);$('capitalBalance').textContent=money(incoming-outgoing)}
 function nextMonth(dateStr){if(!dateStr)return '';let [y,m,d]=dateStr.split('-').map(Number);let target=new Date(y,m-1,1);target.setMonth(target.getMonth()+1);let lastDay=new Date(target.getFullYear(),target.getMonth()+1,0).getDate();target.setDate(Math.min(d,lastDay));return target.getFullYear()+'-'+String(target.getMonth()+1).padStart(2,'0')+'-'+String(target.getDate()).padStart(2,'0')}
 function calcInstallment(){let total=Number($('totalAmount').value),count=Number($('installmentCount').value);$('installmentValue').value=(total>0&&count>=2)?(total/count).toFixed(2):''}
 function updateBankOptions(){
@@ -63,6 +77,7 @@ function updateBankOptions(){
  document.querySelectorAll('[data-bank]').forEach(b=>b.onclick=()=>{$('bank').value=b.dataset.bank;$('description').focus();$('banks').style.display='none'});
 }
 function render(){
+ renderCapital();
  const grandTotal=expenses.reduce((sum,x)=>sum+Number(x.totalAmount??x.amount??0),0);$('grandTotal').textContent=money(grandTotal);
  const used=[...new Set([...banks,...expenses.map(x=>x.bank)])];
  $('summary').innerHTML=used.map(b=>{let list=expenses.filter(x=>x.bank===b),total=list.reduce((s,x)=>s+Number(x.totalAmount??x.amount),0),paid=list.reduce((s,x)=>s+(x.kind==='installment'?Number(x.installmentValue||0)*Number(x.paidCount||0):(x.status==='PAGO'?Number(x.amount):0)),0);return '<div class="tile"><b>'+esc(b)+'</b><strong>'+money(total)+'</strong><div class="muted">Pago: '+money(paid)+'</div><div class="muted">Pendente: '+money(Math.max(0,total-paid))+'</div></div>'}).join('');
@@ -75,6 +90,7 @@ $('totalAmount').oninput=calcInstallment;$('installmentCount').oninput=calcInsta
 $('kind').onchange=()=>{let on=$('kind').value==='installment';$('installmentValueWrap').style.display=on?'block':'none';$('countWrap').style.display=on?'block':'none';$('paidWrap').style.display=on?'block':'none';$('installmentHint').style.display=on?'block':'none';$('totalWrap').querySelector('label').textContent=on?'Valor total da compra (R$)':'Valor (R$)';$('installmentValue').required=on;$('installmentCount').required=on;calcInstallment()};
 $('expenseForm').onsubmit=e=>{e.preventDefault();let inst=$('kind').value==='installment',total=Number($('totalAmount').value),unit=Number($('installmentValue').value),count=Number($('installmentCount').value),paid=Number($('paidCount').value||0);if(inst&&(count<2||paid>count||unit<=0||total<=0)){alert('Confira os valores e a quantidade de parcelas.');return}expenses.unshift({id:Date.now().toString(),description:$('description').value.trim(),bank:$('bank').value,amount:inst?total:Number($('totalAmount').value),totalAmount:total,date:$('date').value,status:$('status').value,kind:inst?'installment':'single',installmentValue:unit,installmentCount:count,paidCount:paid});save();e.target.reset();$('kind').value='single';$('kind').onchange()};
 $('filter').onchange=render;$('filterStatus').onchange=render;
+$('capitalForm').onsubmit=e=>{e.preventDefault();let description=$('capitalDescription').value.trim(),amount=Number($('capitalAmount').value);if(amount<=0){alert('Informe um valor válido para a entrada.');return}capitalEntries.unshift({id:Date.now().toString(),description:description||'Entrada de capital',amount});localStorage.setItem('entradasCapitalCasa',JSON.stringify(capitalEntries));e.target.reset();renderCapital()};
 window.payInstallment=id=>{let x=expenses.find(x=>x.id===id);if(x&&Number(x.paidCount)<Number(x.installmentCount)){x.paidCount=Number(x.paidCount)+1;if(Number(x.paidCount)<Number(x.installmentCount)&&x.date)x.date=nextMonth(x.date);save()}};
 window.toggleStatus=id=>{let x=expenses.find(x=>x.id===id);if(x){x.status=x.status==='PAGO'?'PENDENTE':'PAGO';save()}};
 window.removeExpense=id=>{if(confirm('Excluir esta despesa?')){expenses=expenses.filter(x=>x.id!==id);save()}};
