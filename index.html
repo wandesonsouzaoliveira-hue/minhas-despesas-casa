@@ -18,7 +18,7 @@ label{display:block;font-size:13px;font-weight:bold;margin:10px 0 5px}
 input,select{width:100%;padding:12px;border:1px solid #d8d3e4;border-radius:9px;font-size:16px;background:white}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.wide{grid-column:1/-1}
 .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-.tile{background:#f0edf8;padding:13px;border-radius:10px}.tile b{display:block;font-size:12px;margin-bottom:7px}.tile strong{font-size:18px}
+.tile{background:#f0edf8;padding:13px;border-radius:10px}.grand-total{background:#f0edf8;border-radius:10px;padding:14px;margin-top:14px}.grand-total b{display:block;font-size:13px;margin-bottom:6px}.grand-total strong{font-size:22px;color:var(--roxo)}.tile b{display:block;font-size:12px;margin-bottom:7px}.tile strong{font-size:18px}
 table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #eee;vertical-align:top}th{font-size:12px;color:#625b72}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.muted{color:#716b7d;font-size:13px}.tag{padding:4px 7px;border-radius:20px;background:#eee8ff;font-size:12px}
 @media(max-width:560px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:1fr}.banks{grid-template-columns:1fr}table{font-size:12px}}
@@ -27,7 +27,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 <main>
 <section class="card"><h2>Bancos</h2><button id="showBanks">＋ ADICIONAR TODOS OS BANCOS</button>
 <div class="banks" id="banks"></div><div class="actions"><button id="addBank" class="secondary">＋ ADICIONAR OUTRO BANCO</button></div>
-<p class="muted">Cadastre outros bancos e selecione um para lançar uma despesa.</p></section>
+<div class="grand-total"><b>VALOR TOTAL DAS DESPESAS</b><strong id="grandTotal">R$ 0,00</strong></div><p class="muted">Cadastre outros bancos e selecione um para lançar uma despesa.</p></section>
 <section class="card"><h2>Adicionar despesa ou compra parcelada</h2>
 <form id="expenseForm"><div class="grid">
 <div class="wide"><label>Descrição da despesa / compra</label><input id="description" required placeholder="Ex.: Conta de luz ou Geladeira"></div>
@@ -63,6 +63,7 @@ function updateBankOptions(){
  document.querySelectorAll('[data-bank]').forEach(b=>b.onclick=()=>{$('bank').value=b.dataset.bank;$('description').focus();$('banks').style.display='none'});
 }
 function render(){
+ const grandTotal=expenses.reduce((sum,x)=>sum+Number(x.totalAmount??x.amount??0),0);$('grandTotal').textContent=money(grandTotal);
  const used=[...new Set([...banks,...expenses.map(x=>x.bank)])];
  $('summary').innerHTML=used.map(b=>{let list=expenses.filter(x=>x.bank===b),total=list.reduce((s,x)=>s+Number(x.totalAmount??x.amount),0),paid=list.reduce((s,x)=>s+(x.kind==='installment'?Number(x.installmentValue||0)*Number(x.paidCount||0):(x.status==='PAGO'?Number(x.amount):0)),0);return '<div class="tile"><b>'+esc(b)+'</b><strong>'+money(total)+'</strong><div class="muted">Pago: '+money(paid)+'</div><div class="muted">Pendente: '+money(Math.max(0,total-paid))+'</div></div>'}).join('');
  let list=expenses.filter(x=>(!$('filter').value||x.bank===$('filter').value)&&(!$('filterStatus').value||(x.kind==='installment'?((Number(x.paidCount||0)>=Number(x.installmentCount))?'PAGO':'PENDENTE'):x.status)===$('filterStatus').value));
